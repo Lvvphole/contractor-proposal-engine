@@ -67,7 +67,7 @@ export function computePricing(quote: Quote, config: PricingConfig): PricingResu
 
   const tax = config.tax_rate_override !== undefined
     ? round2(materials_total * config.tax_rate_override / 100)
-    : 0;
+    : round2(quote.tax);
 
   const proposal_total = round2(materials_total + tax);
   const deposit_amount = round2(proposal_total * config.deposit_percent / 100);

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "vault/shared/schemas/event.json",
+  "title": "Event",
+  "description": "Immutable event appended to the event log on every state mutation",
+  "type": "object",
+  "required": ["id", "tenant_id", "type", "aggregate_id", "aggregate_type", "payload", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id":             { "type": "string", "format": "uuid" },
+    "tenant_id":      { "type": "string", "format": "uuid" },
+    "type":           { "type": "string", "description": "SCREAMING_SNAKE_CASE, e.g. QUOTE_CREATED" },
+    "aggregate_id":   { "type": "string", "format": "uuid" },
+    "aggregate_type": { "type": "string", "enum": ["quote", "proposal", "payment"] },
+    "payload":        { "type": "object", "description": "Event-specific data; shape is determined by type" },
+    "created_at":     { "type": "string", "format": "date-time" },
+    "actor":          { "type": "string", "description": "Clerk user_id or 'system'" }
+  }
+}

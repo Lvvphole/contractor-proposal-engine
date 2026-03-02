@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "vault/shared/schemas/payment.json",
+  "title": "Payment",
+  "description": "Payment record created from a Stripe Checkout webhook event",
+  "type": "object",
+  "required": ["id", "tenant_id", "proposal_id", "mode", "amount", "currency", "status", "stripe_session_id", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id":                       { "type": "string", "format": "uuid" },
+    "tenant_id":                { "type": "string", "format": "uuid" },
+    "proposal_id":              { "type": "string", "format": "uuid" },
+    "mode":                     { "type": "string", "enum": ["deposit", "full"] },
+    "amount":                   { "type": "number", "minimum": 0, "description": "Dollars with 2 decimal places" },
+    "currency":                 { "type": "string", "default": "usd" },
+    "status":                   { "type": "string", "enum": ["pending", "succeeded", "failed", "refunded"] },
+    "stripe_session_id":        { "type": "string" },
+    "stripe_payment_intent_id": { "type": "string" },
+    "created_at":               { "type": "string", "format": "date-time" },
+    "completed_at":             { "type": "string", "format": "date-time" }
+  }
+}

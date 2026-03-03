@@ -1,54 +1,38 @@
 import Link from 'next/link';
 import { createServerClient } from '@/lib/supabase';
-import { getTenantId } from './_lib/get-tenant';
-import { StatusBadge } from './_components/status-badge';
-import IngestForm from './ingest-form';
+import { getTenantId } from '../_lib/get-tenant';
+import { StatusBadge } from '../_components/status-badge';
 
-export default async function DashboardPage() {
+export default async function ProposalsPage() {
   const tenantId = await getTenantId();
   const supabase = createServerClient();
 
-  const { data: rows } = await supabase
+  const { data: proposals } = await supabase
     .from('proposals_cache')
-    .select('proposal_id, status, contractor_name, project_name, proposal_total, created_at')
+    .select(
+      'proposal_id, status, contractor_name, project_name, proposal_total, deposit_amount, created_at'
+    )
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false });
 
-  const all = rows ?? [];
-  const paid = all.filter(r => r.status === 'paid');
-  const open = all.filter(r => ['sent', 'viewed', 'accepted'].includes(r.status));
-  const revenue = paid.reduce((sum, r) => sum + Number(r.proposal_total ?? 0), 0);
-
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold">Overview</h1>
-        <IngestForm />
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Proposals" value={String(all.length)} />
-        <StatCard label="Open" value={String(open.length)} />
-        <StatCard label="Paid" value={String(paid.length)} />
-        <StatCard label="Revenue" value={`$${revenue.toFixed(2)}`} />
-      </div>
-
-      <h2 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
-        Recent Proposals
-      </h2>
+      <h1 className="text-xl font-semibold mb-6">Proposals</h1>
       <div className="bg-white rounded-lg border overflow-hidden">
-        {all.length > 0 ? (
+        {proposals?.length ? (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-4 py-2 text-left font-medium text-gray-500">Project</th>
                 <th className="px-4 py-2 text-left font-medium text-gray-500">Status</th>
                 <th className="px-4 py-2 text-right font-medium text-gray-500">Total</th>
+                <th className="px-4 py-2 text-right font-medium text-gray-500">Deposit</th>
                 <th className="px-4 py-2 text-right font-medium text-gray-500">Date</th>
+                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y">
-              {all.slice(0, 8).map(p => (
+              {proposals.map(p => (
                 <tr key={p.proposal_id} className="hover:bg-gray-50">
                   <td className="px-4 py-2">
                     <Link
@@ -62,28 +46,28 @@ export default async function DashboardPage() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="px-4 py-2 text-right">${Number(p.proposal_total).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">
+                    {p.deposit_amount ? `$${Number(p.deposit_amount).toFixed(2)}` : '—'}
+                  </td>
                   <td className="px-4 py-2 text-right text-gray-400">
                     {new Date(p.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <Link
+                      href={`/dashboard/proposals/${p.proposal_id}`}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      View →
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <p className="px-4 py-10 text-center text-sm text-gray-400">
-            No proposals yet — upload a quote to get started.
-          </p>
+          <p className="px-4 py-10 text-center text-sm text-gray-400">No proposals yet.</p>
         )}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white rounded-lg border p-4">
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
-      <p className="text-2xl font-semibold">{value}</p>
     </div>
   );
 }

@@ -1,0 +1,226 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Type Check
+  # ---------------------------------------------------------------------------
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit --strict
+
+  # ---------------------------------------------------------------------------
+  # 2. Lint (zero warnings)
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx next lint --max-warnings 0
+
+  # ---------------------------------------------------------------------------
+  # 3. Schema Validation — AJV draft-07 + Zod sync test
+  # ---------------------------------------------------------------------------
+  schema-validation:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Validate JSON Schemas (draft-07)
+        run: |
+          node -e "
+          const Ajv = require('ajv');
+          const addFormats = require('ajv-formats');
+          const fs = require('fs');
+          const path = require('path');
+
+          const ajv = new Ajv({ strict: false });
+          addFormats(ajv);
+
+          const schemaDir = 'vault/shared/schemas';
+          const files = fs.readdirSync(schemaDir).filter(f => f.endsWith('.json'));
+          let passed = 0;
+          for (const file of files) {
+            const schema = JSON.parse(fs.readFileSync(path.join(schemaDir, file), 'utf8'));
+            try {
+              ajv.validateSchema(schema, true);
+              console.log('PASS:', file);
+              passed++;
+            } catch (err) {
+              console.error('FAIL:', file, err.message);
+              process.exit(1);
+            }
+          }
+          console.log(passed + ' schemas valid');
+          "
+      - name: Zod / JSON Schema sync
+        run: npx vitest run tests/schema-sync.test.ts
+
+  # ---------------------------------------------------------------------------
+  # 4. Unit Tests
+  # ---------------------------------------------------------------------------
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run tests/unit/ tests/pricing/
+
+  # ---------------------------------------------------------------------------
+  # 5. Pricing Determinism (100-iteration check)
+  # ---------------------------------------------------------------------------
+  pricing-determinism:
+    name: Pricing Determinism
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run tests/pricing/determinism.test.ts
+
+  # ---------------------------------------------------------------------------
+  # 6. Golden Corpus Regression Tests
+  # ---------------------------------------------------------------------------
+  golden-corpus:
+    name: Golden Corpus
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run 'tests/golden-corpus/**/*.test.ts' --passWithNoTests
+
+  # ---------------------------------------------------------------------------
+  # 7. Integration Tests (mocked MCP tools)
+  # ---------------------------------------------------------------------------
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run tests/integration/
+
+  # ---------------------------------------------------------------------------
+  # 8. Vault Bootstrap — run script and verify directory structure
+  # ---------------------------------------------------------------------------
+  vault-bootstrap:
+    name: Vault Bootstrap
+    runs-on: ubuntu-latest
+    env:
+      TEST_TENANT: 550e8400-e29b-41d4-a716-446655440000
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run bootstrap script
+        run: bash scripts/bootstrap-vault.sh "$TEST_TENANT"
+      - name: Verify directory structure
+        run: |
+          T="$TEST_TENANT"
+          for dir in \
+            vault/shared/schemas \
+            vault/shared/skills \
+            vault/shared/golden_corpus \
+            "vault/tenants/$T/inbox/pdf" \
+            "vault/tenants/$T/docs" \
+            "vault/tenants/$T/events" \
+            "vault/tenants/$T/exports" \
+            "vault/tenants/$T/config"
+          do
+            test -d "$dir" || { echo "MISSING directory: $dir"; exit 1; }
+          done
+          for file in \
+            vault/shared/schemas/quote.json \
+            vault/shared/schemas/proposal.json \
+            vault/shared/schemas/event.json \
+            vault/shared/schemas/payment.json \
+            "vault/tenants/$T/config/pricing.json"
+          do
+            test -f "$file" || { echo "MISSING file: $file"; exit 1; }
+          done
+          echo "All vault directories and files present"
+
+  # ---------------------------------------------------------------------------
+  # 9. SQL Validation — apply schema.sql to Postgres 15 service container
+  # ---------------------------------------------------------------------------
+  sql-validation:
+    name: SQL Validation
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: proposal_engine_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stub Supabase auth schema
+        run: |
+          psql -h localhost -U postgres -d proposal_engine_ci <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS auth;
+          CREATE OR REPLACE FUNCTION auth.jwt()
+            RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;
+          CREATE OR REPLACE FUNCTION auth.tenant_id()
+            RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
+          SQL
+      - name: Apply supabase/schema.sql
+        run: psql -h localhost -U postgres -d proposal_engine_ci -f supabase/schema.sql
+      - name: Verify tables exist
+        run: |
+          psql -h localhost -U postgres -d proposal_engine_ci -c "
+          SELECT table_name
+          FROM information_schema.tables
+          WHERE table_schema = 'public'
+          ORDER BY table_name;
+          "

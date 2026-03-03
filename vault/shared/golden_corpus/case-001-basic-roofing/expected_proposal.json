@@ -1,0 +1,43 @@
+{
+  "line_items": [
+    {
+      "description": "30-Year Architectural Shingles",
+      "category": "roofing",
+      "cost": 1470.00,
+      "margin_pct": 0.30,
+      "price": 2100.00
+    },
+    {
+      "description": "Roofing Felt Underlayment 15lb",
+      "category": "roofing",
+      "cost": 140.00,
+      "margin_pct": 0.30,
+      "price": 200.00
+    },
+    {
+      "description": "Ridge Cap Shingles",
+      "category": "roofing",
+      "cost": 98.00,
+      "margin_pct": 0.30,
+      "price": 140.00
+    },
+    {
+      "description": "Aluminum Drip Edge 10ft",
+      "category": "roofing",
+      "cost": 70.00,
+      "margin_pct": 0.30,
+      "price": 100.00
+    },
+    {
+      "description": "Galvanized Roofing Nails 1-3/4in 5lb",
+      "category": "roofing",
+      "cost": 42.00,
+      "margin_pct": 0.30,
+      "price": 60.00
+    }
+  ],
+  "materials_total": 2600.00,
+  "tax": 0.00,
+  "proposal_total": 2600.00,
+  "deposit_amount": 1300.00
+}

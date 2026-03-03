@@ -1,0 +1,58 @@
+{
+  "id": "a1b2c3d4-e5f6-4789-ab12-cd3456789012",
+  "tenant_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "created_at": "2024-03-15T00:00:00.000Z",
+  "status": "draft",
+  "source_file": "vault/shared/golden_corpus/case-001-basic-roofing/input.txt",
+  "supplier": "Home Depot",
+  "line_items": [
+    {
+      "description": "30-Year Architectural Shingles",
+      "quantity": 15,
+      "unit": "square",
+      "unit_cost": 98.00,
+      "total_cost": 1470.00,
+      "category": "roofing",
+      "sku": "202847163"
+    },
+    {
+      "description": "Roofing Felt Underlayment 15lb",
+      "quantity": 4,
+      "unit": "roll",
+      "unit_cost": 35.00,
+      "total_cost": 140.00,
+      "category": "roofing",
+      "sku": "314572091"
+    },
+    {
+      "description": "Ridge Cap Shingles",
+      "quantity": 2,
+      "unit": "bundle",
+      "unit_cost": 49.00,
+      "total_cost": 98.00,
+      "category": "roofing",
+      "sku": "408236517"
+    },
+    {
+      "description": "Aluminum Drip Edge 10ft",
+      "quantity": 10,
+      "unit": "each",
+      "unit_cost": 7.00,
+      "total_cost": 70.00,
+      "category": "roofing",
+      "sku": "510934827"
+    },
+    {
+      "description": "Galvanized Roofing Nails 1-3/4in 5lb",
+      "quantity": 3,
+      "unit": "box",
+      "unit_cost": 14.00,
+      "total_cost": 42.00,
+      "category": "roofing",
+      "sku": "619045382"
+    }
+  ],
+  "subtotal": 1820.00,
+  "tax": 0.00,
+  "total": 1820.00
+}

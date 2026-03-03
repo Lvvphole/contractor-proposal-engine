@@ -1,0 +1,7 @@
+{
+  "default_margin_percent": 25,
+  "category_overrides": {
+    "roofing": 30
+  },
+  "deposit_percent": 50
+}

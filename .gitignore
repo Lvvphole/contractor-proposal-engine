@@ -4,6 +4,8 @@ dist/
 coverage/
 *.js.map
 .env
+.env.local
+.next/
 .claude/*
 !.claude/commands/
 !.claude/commands/**
